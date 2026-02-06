@@ -2,71 +2,57 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MemorizationPlan extends Model
 {
-    protected $table = 'memorization_plans';
+    use HasFactory;
 
-    /**
-     * الحقول القابلة للتعبئة
-     */
     protected $fillable = [
-        'student_id',
         'teacher_id',
+        'student_id',
         'plan_type',
         'title',
         'description',
         'start_date',
         'end_date',
-
-        // نطاق الحفظ (آيات)
         'from_surah_id',
-        'from_ayah',
         'to_surah_id',
-        'to_ayah',
-
-        // نطاق الحفظ (صفحات)
         'from_page',
         'to_page',
-
-        // الحالة والتقدم
-        'status',              // pending | in_progress | completed | cancelled
-        'plan_status',         // not_started | in_progress | completed | cancelled
-        'progress_percentage', // cache فقط
+        'from_ayah',
+        'to_ayah',
+        'status',
+        'plan_status',
+        'progress_percentage',
         'total_ayahs',
         'completed_ayahs',
-
+        'total_pages',
+        'completed_pages',
         'notes',
     ];
 
-    /**
-     * تحويلات تلقائية
-     */
     protected $casts = [
         'start_date' => 'date',
-        'end_date'   => 'date',
-        'from_page'  => 'integer',
-        'to_page'    => 'integer',
-        'from_ayah'  => 'integer',
-        'to_ayah'    => 'integer',
+        'end_date' => 'date',
+        'progress_percentage' => 'decimal:2',
         'total_ayahs' => 'integer',
         'completed_ayahs' => 'integer',
-        'progress_percentage' => 'integer',
+        'total_pages' => 'integer',
+        'completed_pages' => 'integer',
     ];
-
-    /* ───────────────────────── العلاقات ───────────────────────── */
-
-    public function student(): BelongsTo
-    {
-        return $this->belongsTo(Student::class);
-    }
 
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class);
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class);
     }
 
     public function fromSurah(): BelongsTo
@@ -84,43 +70,19 @@ class MemorizationPlan extends Model
         return $this->hasMany(MemorizationRecord::class);
     }
 
-    /* ───────────────────────── Accessors ───────────────────────── */
-
     /**
-     * هل الخطة مبنية على صفحات؟
+     * نسبة تقدم الآيات
      */
-    public function getIsPageBasedAttribute(): bool
+    public function getAyahsProgressAttribute(): string
     {
-        return !is_null($this->from_page) && !is_null($this->to_page);
+        return "{$this->completed_ayahs} / {$this->total_ayahs}";
     }
 
     /**
-     * هل الخطة مبنية على آيات؟
+     * نسبة تقدم الصفحات
      */
-    public function getIsAyahBasedAttribute(): bool
+    public function getPagesProgressAttribute(): string
     {
-        return !is_null($this->from_surah_id) && !is_null($this->to_surah_id);
-    }
-
-    /**
-     * حساب نسبة التقدم ديناميكيًا (كمصدر ثانوي)
-     */
-    public function getCalculatedProgressAttribute(): int
-    {
-        if ($this->total_ayahs <= 0) {
-            return 0;
-        }
-
-        return (int) round(
-            ($this->completed_ayahs / $this->total_ayahs) * 100
-        );
-    }
-
-    /**
-     * اسم الخطة مع نوعها (مفيد للـ Select)
-     */
-    public function getDisplayTitleAttribute(): string
-    {
-        return "{$this->title} ({$this->progress_percentage}%)";
+        return "{$this->completed_pages} / {$this->total_pages}";
     }
 }

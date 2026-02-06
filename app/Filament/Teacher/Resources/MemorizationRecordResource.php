@@ -103,33 +103,33 @@ class MemorizationRecordResource extends Resource
                             default => '',
                         }),
 
-                    Forms\Components\Select::make('memorization_plan_id')
-                        ->label('خطة الحفظ')
-                        ->searchable()
-                        ->preload()
-                        ->options(function (Get $get) {
-                            $studentId = $get('student_id');
-                            if (!$studentId) return [];
+                    // Forms\Components\Select::make('memorization_plan_id')
+                    //     ->label('خطة الحفظ')
+                    //     ->searchable()
+                    //     ->preload()
+                    //     ->options(function (Get $get) {
+                    //         $studentId = $get('student_id');
+                    //         if (!$studentId) return [];
 
-                            return MemorizationPlan::where('student_id', $studentId)
-                                ->whereIn('status', ['pending', 'in_progress'])
-                                ->get()
-                                ->mapWithKeys(fn ($p) => [
-                                    $p->id => "{$p->title} ({$p->progress_percentage}%)"
-                                ])
-                                ->toArray();
-                        })
-                        ->disabled(fn (Get $get) => blank($get('student_id')))
-                        ->live()
-                        ->helperText(function (Get $get) {
-                            $planId = $get('memorization_plan_id');
-                            if (!$planId) return 'اختر الطالب أولاً';
+                    //         return MemorizationPlan::where('student_id', $studentId)
+                    //             ->whereIn('status', ['pending', 'in_progress'])
+                    //             ->get()
+                    //             ->mapWithKeys(fn ($p) => [
+                    //                 $p->id => "{$p->title} ({$p->progress_percentage}%)"
+                    //             ])
+                    //             ->toArray();
+                    //     })
+                    //     ->disabled(fn (Get $get) => blank($get('student_id')))
+                    //     ->live()
+                    //     ->helperText(function (Get $get) {
+                    //         $planId = $get('memorization_plan_id');
+                    //         if (!$planId) return 'اختر الطالب أولاً';
 
-                            $plan = MemorizationPlan::find($planId);
-                            if (!$plan) return null;
+                    //         $plan = MemorizationPlan::find($planId);
+                    //         if (!$plan) return null;
 
-                            return "التقدم: {$plan->completed_ayahs}/{$plan->total_ayahs} آية ({$plan->progress_percentage}%)";
-                        }),
+                    //         return "التقدم: {$plan->completed_ayahs}/{$plan->total_ayahs} آية ({$plan->progress_percentage}%)";
+                    //     }),
 
                     Forms\Components\TimePicker::make('session_time')
                         ->label('وقت الجلسة')
