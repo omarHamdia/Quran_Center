@@ -148,141 +148,189 @@ class MemorizationRecordResource extends Resource
             // القسم الثاني: نطاق الحفظ/المراجعة
             // ═══════════════════════════════════════
             Forms\Components\Section::make('نطاق الحفظ')
-                ->description('حدد السورة والآيات التي تم تسميعها')
-                ->schema([
-                    // اختيار السورة من قاعدة البيانات
-                    Forms\Components\Select::make('surah_id')
-                        ->label('السورة')
-                        ->required()
-                        ->searchable()
-                        ->preload()
-                        ->options(fn () => QuranDataService::getSurahOptions())
-                        ->live()
-                        ->afterStateUpdated(function (Set $set, $state) {
-                            if (!$state) return;
+    ->schema([
+        Forms\Components\Grid::make(2)
+            ->schema([
+                Forms\Components\Select::make('surah_id')
+                    ->label('من سورة')
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->options(fn () => QuranDataService::getSurahOptions())
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, $state) {
+                        if (!$state) return;
 
-                            $set('from_ayah', 1);
-                            $set('to_ayah', null);
+                        $set('from_ayah', 1);
+                        $set('to_ayah', null);
+                        $set('to_surah_id', $state); // افتراضياً نفس السورة
 
-                            // جلب صفحة الآية الأولى
-                            $page = QuranDataService::getAyahPage($state, 1);
-                            $set('from_page', $page);
-                            $set('to_page', null);
-                        })
-                        ->helperText(function (Get $get) {
-                            $surahId = $get('surah_id');
-                            if (!$surahId) return null;
+                        // جلب صفحة الآية الأولى
+                        $page = QuranDataService::getAyahPage($state, 1);
+                        $set('from_page', $page);
+                        $set('to_page', null);
+                    })
+                    ->helperText(function (Get $get) {
+                        $surahId = $get('surah_id');
+                        if (!$surahId) return null;
 
-                            $info = QuranDataService::getSurahInfo($surahId);
-                            if (!$info) return null;
+                        $info = QuranDataService::getSurahInfo($surahId);
+                        if (!$info) return null;
 
-                            return "عدد الآيات: {$info['ayah_count']} | الصفحات: {$info['page_start']} - {$info['page_end']}";
-                        }),
+                        return "عدد الآيات: {$info['ayah_count']} | الصفحات: {$info['page_start']} - {$info['page_end']}";
+                    }),
 
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\TextInput::make('from_ayah')
-                                ->label('من آية')
-                                ->required()
-                                ->numeric()
-                                ->minValue(1)
-                                ->default(1)
-                                ->maxValue(function (Get $get) {
-                                    $surahId = $get('surah_id');
-                                    return $surahId ? QuranDataService::getSurahAyahCount($surahId) : 999;
-                                })
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                    $surahId = $get('surah_id');
-                                    if (!$surahId || !$state) return;
+                Forms\Components\Select::make('to_surah_id')
+                    ->label('إلى سورة')
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->options(fn () => QuranDataService::getSurahOptions())
+                    ->live()
+                    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        if (!$state) return;
 
-                                    $maxAyah = QuranDataService::getSurahAyahCount($surahId);
-                                    if ((int) $state > $maxAyah) {
-                                        $set('from_ayah', $maxAyah);
-                                        $state = $maxAyah;
-                                    }
-
-                                    // تحديث الصفحة
-                                    $page = QuranDataService::getAyahPage($surahId, (int) $state);
-                                    if ($page) $set('from_page', $page);
-                                })
-                                ->helperText(function (Get $get) {
-                                    $surahId = $get('surah_id');
-                                    if (!$surahId) return null;
-                                    $max = QuranDataService::getSurahAyahCount($surahId);
-                                    return "الحد الأقصى: {$max}";
-                                }),
-
-                            Forms\Components\TextInput::make('to_ayah')
-                                ->label('إلى آية')
-                                ->required()
-                                ->numeric()
-                                ->minValue(function (Get $get) {
-                                    return (int) ($get('from_ayah') ?? 1);
-                                })
-                                ->maxValue(function (Get $get) {
-                                    $surahId = $get('surah_id');
-                                    return $surahId ? QuranDataService::getSurahAyahCount($surahId) : 999;
-                                })
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                    $surahId = $get('surah_id');
-                                    $fromAyah = (int) ($get('from_ayah') ?? 1);
-                                    if (!$surahId || !$state) return;
-
-                                    $maxAyah = QuranDataService::getSurahAyahCount($surahId);
-
-                                    if ((int) $state > $maxAyah) {
-                                        $set('to_ayah', $maxAyah);
-                                        $state = $maxAyah;
-                                    }
-                                    if ((int) $state < $fromAyah) {
-                                        $set('to_ayah', $fromAyah);
-                                        $state = $fromAyah;
-                                    }
-
-                                    // تحديث الصفحة
-                                    $page = QuranDataService::getAyahPage($surahId, (int) $state);
-                                    if ($page) $set('to_page', $page);
-                                })
-                                ->helperText(function (Get $get) {
-                                    $from = $get('from_ayah');
-                                    $surahId = $get('surah_id');
-                                    if (!$surahId) return null;
-                                    $max = QuranDataService::getSurahAyahCount($surahId);
-                                    return $from ? "من {$from} إلى {$max}" : "الحد الأقصى: {$max}";
-                                }),
-                        ]),
-
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\TextInput::make('from_page')
-                                ->label('من صفحة')
-                                ->numeric()
-                                ->disabled()
-                                ->dehydrated(true),
-
-                            Forms\Components\TextInput::make('to_page')
-                                ->label('إلى صفحة')
-                                ->numeric()
-                                ->disabled()
-                                ->dehydrated(true),
-                        ]),
-
-                    // عدد الآيات المحسوب
-                    Forms\Components\Placeholder::make('ayahs_count_display')
-                        ->label('عدد الآيات')
-                        ->content(function (Get $get) {
-                            $from = (int) ($get('from_ayah') ?? 0);
-                            $to = (int) ($get('to_ayah') ?? 0);
-
-                            if ($from && $to && $to >= $from) {
-                                $count = $to - $from + 1;
-                                return "📖 {$count} آية";
+                        $fromSurah = $get('surah_id');
+                        
+                        // إذا كانت نفس السورة، تحقق من الآيات
+                        if ($state == $fromSurah) {
+                            $fromAyah = $get('from_ayah') ?? 1;
+                            $toAyah = $get('to_ayah');
+                            if ($toAyah && $toAyah < $fromAyah) {
+                                $set('to_ayah', $fromAyah);
                             }
-                            return '-';
-                        }),
-                ]),
+                        } else {
+                            // سورة مختلفة - إعادة تعيين to_ayah
+                            $maxAyah = QuranDataService::getSurahAyahCount($state);
+                            $set('to_ayah', $maxAyah);
+                        }
+
+                        // تحديث صفحة النهاية
+                        $toAyah = $get('to_ayah') ?? QuranDataService::getSurahAyahCount($state);
+                        $page = QuranDataService::getAyahPage($state, $toAyah);
+                        if ($page) $set('to_page', $page);
+                    })
+                    ->helperText(function (Get $get) {
+                        $surahId = $get('to_surah_id');
+                        if (!$surahId) return null;
+
+                        $info = QuranDataService::getSurahInfo($surahId);
+                        if (!$info) return null;
+
+                        return "عدد الآيات: {$info['ayah_count']}";
+                    }),
+            ]),
+
+        Forms\Components\Grid::make(2)
+            ->schema([
+                Forms\Components\TextInput::make('from_ayah')
+                    ->label('من آية')
+                    ->required()
+                    ->numeric()
+                    ->minValue(1)
+                    ->default(1)
+                    ->maxValue(function (Get $get) {
+                        $surahId = $get('surah_id');
+                        return $surahId ? QuranDataService::getSurahAyahCount($surahId) : 999;
+                    })
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        $surahId = $get('surah_id');
+                        if (!$surahId || !$state) return;
+
+                        $maxAyah = QuranDataService::getSurahAyahCount($surahId);
+                        if ((int) $state > $maxAyah) {
+                            $set('from_ayah', $maxAyah);
+                            $state = $maxAyah;
+                        }
+
+                        // تحديث الصفحة
+                        $page = QuranDataService::getAyahPage($surahId, (int) $state);
+                        if ($page) $set('from_page', $page);
+
+                        // إذا نفس السورة وto_ayah أصغر من from_ayah
+                        if ($get('surah_id') == $get('to_surah_id')) {
+                            $toAyah = $get('to_ayah');
+                            if ($toAyah && (int) $toAyah < (int) $state) {
+                                $set('to_ayah', $state);
+                            }
+                        }
+                    })
+                    ->helperText(function (Get $get) {
+                        $surahId = $get('surah_id');
+                        if (!$surahId) return null;
+                        $max = QuranDataService::getSurahAyahCount($surahId);
+                        return "الحد الأقصى: {$max}";
+                    }),
+
+                Forms\Components\TextInput::make('to_ayah')
+                    ->label('إلى آية')
+                    ->required()
+                    ->numeric()
+                    ->minValue(function (Get $get) {
+                        // إذا نفس السورة
+                        if ($get('surah_id') == $get('to_surah_id')) {
+                            return (int) ($get('from_ayah') ?? 1);
+                        }
+                        return 1;
+                    })
+                    ->maxValue(function (Get $get) {
+                        $surahId = $get('to_surah_id') ?? $get('surah_id');
+                        return $surahId ? QuranDataService::getSurahAyahCount($surahId) : 999;
+                    })
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        $toSurahId = $get('to_surah_id') ?? $get('surah_id');
+                        if (!$toSurahId || !$state) return;
+
+                        $maxAyah = QuranDataService::getSurahAyahCount($toSurahId);
+                        if ((int) $state > $maxAyah) {
+                            $set('to_ayah', $maxAyah);
+                            $state = $maxAyah;
+                        }
+
+                        // تحديث الصفحة
+                        $page = QuranDataService::getAyahPage($toSurahId, (int) $state);
+                        if ($page) $set('to_page', $page);
+
+                        // حساب عدد الآيات
+                        $fromSurahId = $get('surah_id');
+                        $fromAyah = $get('from_ayah');
+                        if ($fromSurahId && $fromAyah) {
+                            if ($fromSurahId == $toSurahId) {
+                                $set('ayahs_count_display', (int) $state - (int) $fromAyah + 1);
+                            }
+                        }
+                    })
+                    ->helperText(function (Get $get) {
+                        $surahId = $get('to_surah_id') ?? $get('surah_id');
+                        if (!$surahId) return null;
+                        $max = QuranDataService::getSurahAyahCount($surahId);
+                        
+                        if ($get('surah_id') == $get('to_surah_id')) {
+                            $min = $get('from_ayah') ?? 1;
+                            return "من {$min} إلى {$max}";
+                        }
+                        return "الحد الأقصى: {$max}";
+                    }),
+            ]),
+
+        // الصفحات (تحسب تلقائياً)
+        Forms\Components\Grid::make(2)
+            ->schema([
+                Forms\Components\TextInput::make('from_page')
+                    ->label('من صفحة')
+                    ->numeric()
+                    ->disabled()
+                    ->dehydrated(true),
+
+                Forms\Components\TextInput::make('to_page')
+                    ->label('إلى صفحة')
+                    ->numeric()
+                    ->disabled()
+                    ->dehydrated(true),
+            ]),
+    ])->columns(1),
 
             // ═══════════════════════════════════════
             // القسم الثالث: التقييم

@@ -4,6 +4,7 @@ namespace App\Filament\Teacher\Resources;
 
 use App\Filament\Teacher\Resources\MemorizationPlanResource\Pages;
 use App\Models\MemorizationPlan;
+use App\Models\QuranAyah;
 use App\Models\Student;
 use App\Models\Surah;
 use App\Models\Teacher;
@@ -68,6 +69,8 @@ class MemorizationPlanResource extends Resource
 
     private static function getSurahName($surah): string
     {
+        if (!$surah) return '-';
+        
         $name = $surah->name_arabic ?? $surah->name_ar ?? $surah->arabic_name
             ?? $surah->surah_name ?? $surah->name ?? $surah->title ?? null;
 
@@ -79,18 +82,9 @@ class MemorizationPlanResource extends Resource
 
     private static function getSurahAyahCount($surah): int
     {
+        if (!$surah) return 0;
         return (int) ($surah->ayah_count ?? $surah->verses_count ?? $surah->ayahs
             ?? $surah->total_ayahs ?? $surah->ayat ?? $surah->verses ?? 0);
-    }
-
-    private static function getSurahPageStart($surah): int
-    {
-        return (int) ($surah->page_start ?? $surah->start_page ?? $surah->page ?? 0);
-    }
-
-    private static function getSurahPageEnd($surah): int
-    {
-        return (int) ($surah->page_end ?? $surah->end_page ?? 0);
     }
 
     private static function getSurahOptions(): array
@@ -104,6 +98,16 @@ class MemorizationPlanResource extends Resource
                 return [$surah->id => "{$number} - {$name}"];
             })
             ->toArray();
+    }
+
+    /**
+     * ✅ دالة لحساب صفحة الآية تلقائياً
+     */
+    private static function getAyahPage(int $surahId, int $ayahNumber): ?int
+    {
+        return QuranAyah::where('surah_id', $surahId)
+            ->where('ayah_number', $ayahNumber)
+            ->value('page_number');
     }
 
     public static function form(Form $form): Form
@@ -161,7 +165,7 @@ class MemorizationPlanResource extends Resource
 
             // ✅ قسم نطاق الحفظ المحسّن
             Forms\Components\Section::make('نطاق الحفظ')
-                ->description('حدد نطاق الحفظ من سورة وآية إلى سورة وآية أخرى')
+                ->description('حدد نطاق الحفظ - الصفحات تُحسب تلقائياً')
                 ->schema([
 
                     // ═══════════════════════════════════════
@@ -180,16 +184,19 @@ class MemorizationPlanResource extends Resource
                                     $set('from_ayah', 1);
                                     $set('to_surah_id', $state);
                                     $set('to_ayah', null);
-                                    $set('from_page', null);
-                                    $set('to_page', null);
+                                    
+                                    // ✅ حساب الصفحة تلقائياً
+                                    if ($state) {
+                                        $page = self::getAyahPage($state, 1);
+                                        $set('from_page', $page);
+                                        $set('to_page', null);
+                                    }
                                 })
                                 ->helperText(function (Get $get) {
                                     $surah = Surah::find($get('from_surah_id'));
                                     if (!$surah) return null;
                                     $count = self::getSurahAyahCount($surah);
-                                    $pageStart = self::getSurahPageStart($surah);
-                                    $pageEnd = self::getSurahPageEnd($surah);
-                                    return "عدد الآيات: {$count} | الصفحات: {$pageStart} - {$pageEnd}";
+                                    return "عدد الآيات: {$count}";
                                 }),
 
                             Forms\Components\TextInput::make('from_ayah')
@@ -205,15 +212,36 @@ class MemorizationPlanResource extends Resource
                                 ->disabled(fn (Get $get) => blank($get('from_surah_id')))
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                    $surah = Surah::find($get('from_surah_id'));
+                                    $surahId = $get('from_surah_id');
+                                    if (!$surahId || !$state) return;
+
+                                    $surah = Surah::find($surahId);
                                     if (!$surah) return;
 
                                     $maxAyah = self::getSurahAyahCount($surah);
-                                    if ($state && (int) $state > $maxAyah) {
+                                    if ((int) $state > $maxAyah) {
                                         $set('from_ayah', $maxAyah);
+                                        $state = $maxAyah;
                                     }
-                                    if ($state && (int) $state < 1) {
+                                    if ((int) $state < 1) {
                                         $set('from_ayah', 1);
+                                        $state = 1;
+                                    }
+
+                                    // ✅ حساب الصفحة تلقائياً
+                                    $page = self::getAyahPage($surahId, (int) $state);
+                                    if ($page) {
+                                        $set('from_page', $page);
+                                    }
+
+                                    // تحديث to_ayah إذا لزم
+                                    if ($get('from_surah_id') == $get('to_surah_id')) {
+                                        $toAyah = $get('to_ayah');
+                                        if ($toAyah && (int) $toAyah < (int) $state) {
+                                            $set('to_ayah', $state);
+                                            $toPage = self::getAyahPage($surahId, (int) $state);
+                                            if ($toPage) $set('to_page', $toPage);
+                                        }
                                     }
                                 })
                                 ->helperText(function (Get $get) {
@@ -237,7 +265,6 @@ class MemorizationPlanResource extends Resource
                                     $fromSurahId = $get('from_surah_id');
                                     if (!$fromSurahId) return self::getSurahOptions();
 
-                                    // فقط السور من السورة المحددة وما بعدها
                                     return Surah::query()
                                         ->where('id', '>=', $fromSurahId)
                                         ->orderBy('id')
@@ -256,25 +283,30 @@ class MemorizationPlanResource extends Resource
                                     $toSurah = Surah::find($state);
 
                                     if ($toSurah) {
-                                        // إذا نفس السورة، تأكد أن to_ayah >= from_ayah
+                                        $maxAyah = self::getSurahAyahCount($toSurah);
+                                        
                                         if ($state == $fromSurahId) {
-                                            $fromAyah = (int) $get('from_ayah');
-                                            $set('to_ayah', max($fromAyah, 1));
+                                            $fromAyah = (int) ($get('from_ayah') ?? 1);
+                                            $set('to_ayah', max($fromAyah, $maxAyah));
                                         } else {
-                                            // سورة مختلفة، ابدأ من الآية 1 أو آخر آية
-                                            $set('to_ayah', self::getSurahAyahCount($toSurah));
+                                            $set('to_ayah', $maxAyah);
+                                        }
+
+                                        // ✅ حساب صفحة النهاية تلقائياً
+                                        $toAyah = $state == $fromSurahId 
+                                            ? max((int) ($get('from_ayah') ?? 1), $maxAyah)
+                                            : $maxAyah;
+                                        $page = self::getAyahPage($state, $toAyah);
+                                        if ($page) {
+                                            $set('to_page', $page);
                                         }
                                     }
-                                    $set('from_page', null);
-                                    $set('to_page', null);
                                 })
                                 ->helperText(function (Get $get) {
                                     $surah = Surah::find($get('to_surah_id'));
                                     if (!$surah) return null;
                                     $count = self::getSurahAyahCount($surah);
-                                    $pageStart = self::getSurahPageStart($surah);
-                                    $pageEnd = self::getSurahPageEnd($surah);
-                                    return "عدد الآيات: {$count} | الصفحات: {$pageStart} - {$pageEnd}";
+                                    return "عدد الآيات: {$count}";
                                 }),
 
                             Forms\Components\TextInput::make('to_ayah')
@@ -282,7 +314,6 @@ class MemorizationPlanResource extends Resource
                                 ->required()
                                 ->numeric()
                                 ->minValue(function (Get $get) {
-                                    // إذا نفس السورة، الحد الأدنى = from_ayah
                                     if ($get('from_surah_id') == $get('to_surah_id')) {
                                         return (int) ($get('from_ayah') ?? 1);
                                     }
@@ -295,22 +326,32 @@ class MemorizationPlanResource extends Resource
                                 ->disabled(fn (Get $get) => blank($get('to_surah_id')))
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                    $toSurah = Surah::find($get('to_surah_id'));
+                                    $toSurahId = $get('to_surah_id');
+                                    if (!$toSurahId || !$state) return;
+
+                                    $toSurah = Surah::find($toSurahId);
                                     if (!$toSurah) return;
 
                                     $maxAyah = self::getSurahAyahCount($toSurah);
                                     $minAyah = 1;
 
-                                    // إذا نفس السورة
-                                    if ($get('from_surah_id') == $get('to_surah_id')) {
+                                    if ($get('from_surah_id') == $toSurahId) {
                                         $minAyah = (int) ($get('from_ayah') ?? 1);
                                     }
 
-                                    if ($state && (int) $state > $maxAyah) {
+                                    if ((int) $state > $maxAyah) {
                                         $set('to_ayah', $maxAyah);
+                                        $state = $maxAyah;
                                     }
-                                    if ($state && (int) $state < $minAyah) {
+                                    if ((int) $state < $minAyah) {
                                         $set('to_ayah', $minAyah);
+                                        $state = $minAyah;
+                                    }
+
+                                    // ✅ حساب الصفحة تلقائياً
+                                    $page = self::getAyahPage($toSurahId, (int) $state);
+                                    if ($page) {
+                                        $set('to_page', $page);
                                     }
                                 })
                                 ->helperText(function (Get $get) {
@@ -326,49 +367,23 @@ class MemorizationPlanResource extends Resource
                         ]),
 
                     // ═══════════════════════════════════════
-                    // 📄 الصفحات (محسوبة تلقائياً)
+                    // 📄 الصفحات (تُحسب تلقائياً - للعرض فقط)
                     // ═══════════════════════════════════════
                     Forms\Components\Grid::make(2)
                         ->schema([
-                            Forms\Components\Select::make('from_page')
+                            Forms\Components\TextInput::make('from_page')
                                 ->label('من صفحة')
-                                ->required()
-                                ->searchable()
-                                ->options(function (Get $get) {
-                                    $fromSurah = Surah::find($get('from_surah_id'));
-                                    $toSurah = Surah::find($get('to_surah_id'));
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated(true)
+                                ->helperText('تُحسب تلقائياً'),
 
-                                    if (!$fromSurah) return [];
-
-                                    // الصفحة الأولى من السورة الأولى
-                                    $start = self::getSurahPageStart($fromSurah);
-                                    // الصفحة الأخيرة من السورة الأخيرة
-                                    $end = $toSurah ? self::getSurahPageEnd($toSurah) : self::getSurahPageEnd($fromSurah);
-
-                                    if ($start <= 0 || $end <= 0 || $end < $start) return [];
-
-                                    return array_combine(range($start, $end), range($start, $end));
-                                })
-                                ->disabled(fn (Get $get) => blank($get('from_surah_id')) || blank($get('to_surah_id')))
-                                ->live()
-                                ->afterStateUpdated(fn (Set $set) => $set('to_page', null)),
-
-                            Forms\Components\Select::make('to_page')
+                            Forms\Components\TextInput::make('to_page')
                                 ->label('إلى صفحة')
-                                ->required()
-                                ->searchable()
-                                ->options(function (Get $get) {
-                                    $fromPage = (int) ($get('from_page') ?? 0);
-                                    $toSurah = Surah::find($get('to_surah_id'));
-
-                                    if (!$toSurah || $fromPage <= 0) return [];
-
-                                    $end = self::getSurahPageEnd($toSurah);
-                                    if ($end <= 0 || $end < $fromPage) return [];
-
-                                    return array_combine(range($fromPage, $end), range($fromPage, $end));
-                                })
-                                ->disabled(fn (Get $get) => blank($get('from_page'))),
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated(true)
+                                ->helperText('تُحسب تلقائياً'),
                         ]),
 
                     // ═══════════════════════════════════════
@@ -475,6 +490,17 @@ class MemorizationPlanResource extends Resource
                         return "{$fromName}:{$record->from_ayah} → {$toName}:{$record->to_ayah}";
                     })
                     ->wrap(),
+
+                // ✅ عمود الصفحات
+                Tables\Columns\TextColumn::make('pages_range')
+                    ->label('الصفحات')
+                    ->getStateUsing(function ($record) {
+                        if ($record->from_page && $record->to_page) {
+                            $count = $record->to_page - $record->from_page + 1;
+                            return "{$record->from_page} - {$record->to_page} ({$count})";
+                        }
+                        return '-';
+                    }),
 
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('البداية')
