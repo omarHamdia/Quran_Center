@@ -88,7 +88,6 @@
                     </div>
                 </div>
 
-                {{-- شريط التقدم --}}
                 <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div class="flex justify-between mb-2 text-sm">
                         <span>التقدم: {{ $planSummary['completed_ayahs'] }} / {{ $planSummary['total_ayahs'] }} آية</span>
@@ -152,7 +151,7 @@
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50 dark:bg-gray-800">
                             <tr>
-                                <th class="p-3 text-right">التاريخ</th>
+                                <th class="p-3 text-right">التا��يخ</th>
                                 <th class="p-3 text-right">النوع</th>
                                 <th class="p-3 text-right">السورة</th>
                                 <th class="p-3 text-right">الآيات</th>

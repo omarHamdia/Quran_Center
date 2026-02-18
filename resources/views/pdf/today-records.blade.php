@@ -239,7 +239,7 @@
                 </div>
                 <div class="summary-grid">
                     <div class="summary-number">{{ $records->unique('student_id')->count() }}</div>
-                    <div class="summary-label">ع��د الطلاب</div>
+                    <div class="summary-label">عد الطلاب</div>
                 </div>
             </div>
         </div>

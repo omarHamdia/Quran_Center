@@ -18,6 +18,14 @@
                     <span class="px-2 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
                         {{ $summary['students_count'] }} طالب
                     </span>
+                    @if($summary['total_sessions'] > 0)
+                        <a href="{{ route('teacher.today-pdf') }}"
+                           target="_blank"
+                           class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400 hover:bg-danger-200 transition-colors">
+                            <x-heroicon-m-arrow-down-tray class="w-3 h-3" />
+                            تنزيل PDF
+                        </a>
+                    @endif
                 </div>
             </div>
         </x-slot>
@@ -102,29 +110,5 @@
                 </table>
             </div>
         @endif
-                <x-slot name="heading">
-            <div class="flex items-center justify-between w-full">
-                <div class="flex items-center gap-2">
-                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-success-500" />
-                    <span>📋 تسميع اليوم - {{ now()->format('Y/m/d') }}</span>
-                </div>
-                <div class="flex items-center gap-3 text-xs">
-                    <span class="px-2 py-1 rounded-full bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400">
-                        {{ $summary['total_sessions'] }} جلسة
-                    </span>
-                    <span class="px-2 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-                        {{ $summary['students_count'] }} طالب
-                    </span>
-                    @if($summary['total_sessions'] > 0)
-                        <a href="{{ {{ route('teacher.today-pdf') }} }}"
-                           class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400 hover:bg-danger-200 transition-colors">
-                            <x-heroicon-m-arrow-down-tray class="w-3 h-3" />
-                            تنزيل PDF
-                        </a>
-                    @endif
-                </div>
-            </div>
-        </x-slot>
     </x-filament::section>
-
 </x-filament-widgets::widget>

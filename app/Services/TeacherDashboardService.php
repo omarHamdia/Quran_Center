@@ -214,24 +214,23 @@ class TeacherDashboardService
      * إحصائيات آخر 7 أيام للرسم البياني
      * استعلام واحد محسّن مع GROUP BY
      */
-    public function getWeeklyChartData(): array
+      public function getWeeklyChartData(): array
     {
         $sevenDaysAgo = $this->today->copy()->subDays(6)->startOfDay();
 
         $dailyStats = MemorizationRecord::where('teacher_id', $this->teacherId)
             ->where('session_date', '>=', $sevenDaysAgo)
             ->where('status', 'completed')
-            ->groupBy('session_date', 'session_type')
+            ->groupBy('date_str', 'session_type')
             ->select([
-                'session_date',
+                DB::raw('DATE(session_date) as date_str'),
                 'session_type',
                 DB::raw('SUM(ayahs_count) as total_ayahs'),
                 DB::raw('COUNT(*) as sessions_count'),
             ])
-            ->orderBy('session_date')
+            ->orderBy('date_str')
             ->get();
 
-        // تجهيز البيانات لـ 7 أيام
         $labels = [];
         $hifzData = [];
         $revisionData = [];
@@ -242,8 +241,7 @@ class TeacherDashboardService
             $date = $this->today->copy()->subDays($i);
             $dateStr = $date->format('Y-m-d');
 
-            // اسم اليوم بالعربية
-            $dayOfWeek = $date->dayOfWeek; // 0=أحد ... 6=سبت
+            $dayOfWeek = $date->dayOfWeek;
             $arabicIndex = match ($dayOfWeek) {
                 Carbon::SATURDAY => 0,
                 Carbon::SUNDAY => 1,
@@ -255,8 +253,8 @@ class TeacherDashboardService
             };
             $labels[] = $arabicDays[$arabicIndex];
 
-            // تجميع البيانات
-            $dayRecords = $dailyStats->where('session_date', $dateStr);
+            // ✅ المقارنة الآن بـ date_str (string) بدلاً من session_date (Carbon)
+            $dayRecords = $dailyStats->where('date_str', $dateStr);
             $hifzData[] = (int) $dayRecords->where('session_type', 'hifz')->sum('total_ayahs');
             $revisionData[] = (int) $dayRecords->where('session_type', 'revision')->sum('total_ayahs');
         }
@@ -342,4 +340,5 @@ class TeacherDashboardService
             'students_count' => (int) ($records->students_count ?? 0),
         ];
     }
+
 }
