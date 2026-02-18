@@ -21,7 +21,7 @@
                 @foreach($inactiveStudents as $student)
                     <div class="flex items-center justify-between p-3 bg-danger-50 dark:bg-danger-900/10 rounded-lg border border-danger-200 dark:border-danger-800">
                         <div>
-                            <a href="{{ url('/teacher/teacher-student-report?student=' . $student['student_id']) }}"
+                            <a href="{{ url('/teacher/student-report?student=' . $student['student_id']) }}"
    class="font-semibold text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 hover:underline">
     {{ $student['student_name'] }}
 </a>

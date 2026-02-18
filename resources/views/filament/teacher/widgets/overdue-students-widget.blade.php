@@ -21,7 +21,7 @@
                 @foreach($overdueStudents as $student)
                     <div class="flex items-center justify-between p-3 bg-warning-50 dark:bg-warning-900/10 rounded-lg border border-warning-200 dark:border-warning-800">
                         <div>
-                            <a href="{{ url('/teacher/teacher-student-report?student=' . $student['student_id']) }}"
+                            <a href="{{ url('/teacher/student-report?student=' . $student['student_id']) }}"
    class="font-semibold text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 hover:underline">
     {{ $student['student_name'] }}
 </a>
