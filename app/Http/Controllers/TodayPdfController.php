@@ -12,7 +12,6 @@ class TodayPdfController extends Controller
 {
     public function __invoke(Request $request)
     {
-        // ✅ التأكد أن المستخدم معلم
         if (!auth()->check()) {
             abort(403);
         }
@@ -41,6 +40,10 @@ class TodayPdfController extends Controller
         ]);
 
         $pdf->setPaper('a4', 'landscape');
+
+        // ✅ تفعيل دعم العربية في DomPDF
+        $pdf->setOption('isRemoteEnabled', true);
+        $pdf->setOption('isHtml5ParserEnabled', true);
 
         return $pdf->download("تسميع-اليوم-{$today}.pdf");
     }

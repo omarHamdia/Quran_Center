@@ -2,14 +2,11 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>تسميع اليوم - {{ $date }}</title>
     <style>
-        @font-face {
-            font-family: 'Cairo';
-            src: url('{{ storage_path("fonts/cairo.ttf") }}');
-        }
         * {
-            font-family: 'Cairo', 'DejaVu Sans', sans-serif;
+            font-family: 'DejaVu Sans', sans-serif;
         }
         body {
             direction: rtl;
@@ -34,15 +31,14 @@
             margin: 5px 0 0;
             font-size: 14px;
         }
-        .meta {
-            display: flex;
-            justify-content: space-between;
+        .meta-table {
+            width: 100%;
             margin-bottom: 15px;
             font-size: 13px;
         }
-        .meta-item {
-            display: inline-block;
-            margin-left: 30px;
+        .meta-table td {
+            padding: 5px 10px;
+            border: none;
         }
         .meta-label {
             color: #888;
@@ -51,24 +47,25 @@
             font-weight: bold;
             color: #333;
         }
-        table {
+        table.records {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
-        th {
+        table.records th {
             background-color: #059669;
             color: white;
             padding: 10px 8px;
             font-size: 11px;
             text-align: right;
         }
-        td {
+        table.records td {
             padding: 8px;
             border-bottom: 1px solid #e5e7eb;
             font-size: 11px;
+            text-align: right;
         }
-        tr:nth-child(even) {
+        table.records tr:nth-child(even) {
             background-color: #f9fafb;
         }
         .badge {
@@ -93,11 +90,16 @@
             color: #059669;
             margin: 0 0 10px;
             font-size: 14px;
+            text-align: right;
         }
-        .summary-grid {
-            display: inline-block;
-            width: 24%;
+        .summary-table {
+            width: 100%;
+        }
+        .summary-table td {
             text-align: center;
+            padding: 5px;
+            border: none;
+            width: 25%;
         }
         .summary-number {
             font-size: 20px;
@@ -121,35 +123,25 @@
 <body>
 
     <div class="header">
-        <h1>📋 مركز تحفيظ القرآن الكريم</h1>
+        <h1>مركز تحفيظ القرآن الكريم</h1>
         <p>تقرير تسميع اليوم - {{ $date }}</p>
     </div>
 
-    <div class="meta">
-        <span class="meta-item">
-            <span class="meta-label">المحفظ: </span>
-            <span class="meta-value">{{ $teacherName }}</span>
-        </span>
-        <span class="meta-item">
-            <span class="meta-label">التاريخ: </span>
-            <span class="meta-value">{{ $dateHijri }}</span>
-        </span>
-        <span class="meta-item">
-            <span class="meta-label">عدد الجلسات: </span>
-            <span class="meta-value">{{ $records->count() }}</span>
-        </span>
-        <span class="meta-item">
-            <span class="meta-label">عدد الطلاب: </span>
-            <span class="meta-value">{{ $records->unique('student_id')->count() }}</span>
-        </span>
-    </div>
+    <table class="meta-table">
+        <tr>
+            <td><span class="meta-label">المحفظ:</span> <span class="meta-value">{{ $teacherName }}</span></td>
+            <td><span class="meta-label">التاريخ:</span> <span class="meta-value">{{ $dateHijri }}</span></td>
+            <td><span class="meta-label">عدد الجلسات:</span> <span class="meta-value">{{ $records->count() }}</span></td>
+            <td><span class="meta-label">عدد الطلاب:</span> <span class="meta-value">{{ $records->unique('student_id')->count() }}</span></td>
+        </tr>
+    </table>
 
     @if($records->isEmpty())
         <div style="text-align: center; padding: 40px; color: #999;">
             <p style="font-size: 16px;">لا توجد جلسات تسميع مسجلة اليوم</p>
         </div>
     @else
-        <table>
+        <table class="records">
             <thead>
                 <tr>
                     <th>#</th>
@@ -223,25 +215,27 @@
         </table>
 
         <div class="summary">
-            <h3>📊 ملخص اليوم</h3>
-            <div>
-                <div class="summary-grid">
-                    <div class="summary-number">{{ $records->count() }}</div>
-                    <div class="summary-label">إجمالي الجلسات</div>
-                </div>
-                <div class="summary-grid">
-                    <div class="summary-number">{{ $records->where('session_type', 'hifz')->sum('ayahs_count') }}</div>
-                    <div class="summary-label">آيات حفظ</div>
-                </div>
-                <div class="summary-grid">
-                    <div class="summary-number">{{ $records->where('session_type', 'revision')->sum('ayahs_count') }}</div>
-                    <div class="summary-label">آيات مراجعة</div>
-                </div>
-                <div class="summary-grid">
-                    <div class="summary-number">{{ $records->unique('student_id')->count() }}</div>
-                    <div class="summary-label">عد الطلاب</div>
-                </div>
-            </div>
+            <h3>ملخص اليوم</h3>
+            <table class="summary-table">
+                <tr>
+                    <td>
+                        <div class="summary-number">{{ $records->count() }}</div>
+                        <div class="summary-label">إجمالي الجلسات</div>
+                    </td>
+                    <td>
+                        <div class="summary-number">{{ $records->where('session_type', 'hifz')->sum('ayahs_count') }}</div>
+                        <div class="summary-label">آيات حفظ</div>
+                    </td>
+                    <td>
+                        <div class="summary-number">{{ $records->where('session_type', 'revision')->sum('ayahs_count') }}</div>
+                        <div class="summary-label">آيات مراجعة</div>
+                    </td>
+                    <td>
+                        <div class="summary-number">{{ $records->unique('student_id')->count() }}</div>
+                        <div class="summary-label">عدد الطلاب</div>
+                    </td>
+                </tr>
+            </table>
         </div>
     @endif
 

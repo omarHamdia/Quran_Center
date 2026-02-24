@@ -2,57 +2,73 @@
 
 namespace App\Filament\Teacher\Widgets;
 
-use App\Services\TeacherDashboardService;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Carbon;
+
+// ✅ عدّل أسماء الـ Models إذا مختلفة عندك
+use App\Models\Teacher;
+use App\Models\MemorizationRecord;
 
 class WeeklyActivityChart extends ChartWidget
 {
-    protected static ?string $heading = '📈 نشاط آخر 7 أيام';
-
-    protected static ?int $sort = 2;
-
-    protected static ?string $maxHeight = '280px';
-
-    protected static ?string $pollingInterval = '60s';
+    protected static ?string $heading = 'نشاط آخر 7 أيام';
 
     protected int|string|array $columnSpan = 'full';
 
     protected function getData(): array
     {
-        $teacherId = TeacherDashboardService::getTeacherId();
+        $teacherId = Teacher::query()
+            ->where('user_id', auth()->id())
+            ->value('id');
 
-        if (!$teacherId) {
-            return [
-                'datasets' => [],
-                'labels' => [],
-            ];
+        $days = collect(range(0, 6))
+            ->map(fn ($i) => Carbon::today()->subDays(6 - $i));
+
+        $labels = $days->map(fn ($d) => $d->translatedFormat('l'))->values()->all();
+
+        $hifz = [];
+        $revision = [];
+
+        foreach ($days as $d) {
+            $records = MemorizationRecord::query()
+                ->where('teacher_id', $teacherId)
+                ->whereDate('session_date', $d)
+                ->get();
+
+            $hifzAyahs = $records->where('session_type', 'hifz')->sum(function ($r) {
+                $from = (int) ($r->from_ayah ?? 0);
+                $to = (int) ($r->to_ayah ?? 0);
+                return ($from > 0 && $to >= $from) ? (($to - $from) + 1) : 0;
+            });
+
+            $revAyahs = $records->where('session_type', 'revision')->sum(function ($r) {
+                $from = (int) ($r->from_ayah ?? 0);
+                $to = (int) ($r->to_ayah ?? 0);
+                return ($from > 0 && $to >= $from) ? (($to - $from) + 1) : 0;
+            });
+
+            $hifz[] = (int) $hifzAyahs;
+            $revision[] = (int) $revAyahs;
         }
-
-        $service = new TeacherDashboardService($teacherId);
-        $chartData = $service->getWeeklyChartData();
 
         return [
             'datasets' => [
                 [
                     'label' => 'حفظ جديد (آيات)',
-                    'data' => $chartData['hifz'],
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.2)',
-                    'borderColor' => 'rgb(16, 185, 129)',
+                    'data' => $hifz,
                     'borderWidth' => 2,
-                    'tension' => 0.3,
                     'fill' => true,
+                    'tension' => 0.35,
                 ],
                 [
                     'label' => 'مراجعة (آيات)',
-                    'data' => $chartData['revision'],
-                    'backgroundColor' => 'rgba(14, 165, 233, 0.2)',
-                    'borderColor' => 'rgb(14, 165, 233)',
+                    'data' => $revision,
                     'borderWidth' => 2,
-                    'tension' => 0.3,
                     'fill' => true,
+                    'tension' => 0.35,
                 ],
             ],
-            'labels' => $chartData['labels'],
+            'labels' => $labels,
         ];
     }
 
@@ -68,18 +84,18 @@ class WeeklyActivityChart extends ChartWidget
                 'legend' => [
                     'display' => true,
                     'position' => 'top',
-                    'rtl' => true,
                     'labels' => [
-                        'font' => ['family' => 'inherit'],
+                        'usePointStyle' => true,
+                        'pointStyle' => 'circle',
                     ],
                 ],
             ],
             'scales' => [
+                'x' => [
+                    'grid' => ['display' => false],
+                ],
                 'y' => [
                     'beginAtZero' => true,
-                    'ticks' => [
-                        'precision' => 0,
-                    ],
                 ],
             ],
         ];

@@ -21,10 +21,10 @@
                 @foreach($inactiveStudents as $student)
                     <div class="flex items-center justify-between p-3 bg-danger-50 dark:bg-danger-900/10 rounded-lg border border-danger-200 dark:border-danger-800">
                         <div>
-                            <a href="{{ url('/teacher/teacher-student-report?student=' . $student['student_id']) }}"
-   class="font-semibold text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 hover:underline">
-    {{ $student['student_name'] }}
-</a>
+                            <a href="{{ url('/teacher/student-report?student=' . $student['student_id']) }}"
+                               class="font-semibold text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 hover:underline">
+                                {{ $student['student_name'] }}
+                            </a>
                         </div>
                         <div class="text-left">
                             <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-full bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400">

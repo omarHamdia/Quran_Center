@@ -2,63 +2,60 @@
 
 namespace App\Filament\Teacher\Widgets;
 
-use App\Services\TeacherDashboardService;
-use Filament\Widgets\StatsOverviewWidget;
+use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
-class WeeklyStatsWidget extends StatsOverviewWidget
-{
-    protected static ?int $sort = 1;
+// ✅ عدّل أسماء الـ Models إذا مختلفة عندك
+use App\Models\Teacher;
+use App\Models\MemorizationRecord;
+use Illuminate\Support\Carbon;
 
-    // تحديث كل 30 ثانية
-    protected static ?string $pollingInterval = '30s';
+class WeeklyStatsWidget extends BaseWidget
+{
+    protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
     {
-        $teacherId = TeacherDashboardService::getTeacherId();
+        $teacherId = Teacher::query()
+            ->where('user_id', auth()->id())
+            ->value('id');
 
-        if (!$teacherId) {
-            return [
-                Stat::make('تنبيه', 'لا يوجد حساب معلم مرتبط')
-                    ->color('danger'),
-            ];
-        }
+        $startOfWeek = Carbon::now()->startOfWeek();
+        $endOfWeek   = Carbon::now()->endOfWeek();
 
-        $service = new TeacherDashboardService($teacherId);
-        $stats = $service->getWeeklyStats();
+        $records = MemorizationRecord::query()
+            ->where('teacher_id', $teacherId)
+            ->whereBetween('session_date', [$startOfWeek, $endOfWeek])
+            ->get();
+
+        $totalSessions = $records->count();
+
+        $totalAyahs = $records->sum(function ($r) {
+            $from = (int) ($r->from_ayah ?? 0);
+            $to = (int) ($r->to_ayah ?? 0);
+            return ($from > 0 && $to >= $from) ? (($to - $from) + 1) : 0;
+        });
+
+        $studentsWithRecords = $records->pluck('student_id')->unique()->count();
+
+        $avgMistakes = $records->avg('mistakes_count') ?? 0;
 
         return [
-            Stat::make('📗 إجمالي الحفظ', $stats['total_memorized'] . ' آية')
-                ->description("من أصل {$stats['total_target']} آية مستهدفة")
-                ->descriptionIcon('heroicon-m-book-open')
-                ->color('success')
-                ->chart($this->getMiniChart($teacherId, 'hifz')),
+            Stat::make('جلسات هذا الأسبوع', $totalSessions)
+                ->description('إجمالي الجلسات')
+                ->icon('heroicon-o-calendar'),
 
-            Stat::make('📘 إجمالي المراجعة', $stats['total_revision'] . ' آية')
-                ->description("{$stats['total_sessions']} جلسة هذا الأسبوع")
-                ->descriptionIcon('heroicon-m-arrow-path')
-                ->color('info'),
+            Stat::make('آيات هذا الأسبوع', (int) $totalAyahs)
+                ->description('مجموع الآيات')
+                ->icon('heroicon-o-book-open'),
 
-            Stat::make('📊 الآيات المتبقية', $stats['remaining'] . ' آية')
-                ->description($stats['remaining'] > 0 ? 'لم تُنجز بعد' : '✅ تم إنجاز الهدف!')
-                ->descriptionIcon($stats['remaining'] > 0 ? 'heroicon-m-clock' : 'heroicon-m-check-circle')
-                ->color($stats['remaining'] > 0 ? 'warning' : 'success'),
+            Stat::make('طلاب شاركوا', $studentsWithRecords)
+                ->description('طلاب لديهم تسميع')
+                ->icon('heroicon-o-user-group'),
 
-            Stat::make('🎯 الهدف المقترح لليوم', $stats['suggested_today'] . ' آية')
-                ->description('(المتبقي ÷ الأيام المتبقية)')
-                ->descriptionIcon('heroicon-m-light-bulb')
-                ->color('primary'),
+            Stat::make('متوسط الأخطاء', round($avgMistakes, 1))
+                ->description('متوسط لكل جلسة')
+                ->icon('heroicon-o-exclamation-triangle'),
         ];
-    }
-
-    /**
-     * رسم بياني مصغّر لآخر 7 أيام (يظهر داخل البطاقة)
-     */
-    private function getMiniChart(int $teacherId, string $type): array
-    {
-        $service = new TeacherDashboardService($teacherId);
-        $chartData = $service->getWeeklyChartData();
-
-        return $chartData[$type] ?? [];
     }
 }

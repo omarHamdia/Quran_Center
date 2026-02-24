@@ -10,6 +10,7 @@ use App\Models\Teacher;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Str;
 
 class TeacherStudentReport extends Page
 {
@@ -19,10 +20,8 @@ class TeacherStudentReport extends Page
     protected static ?string $navigationGroup = 'التقارير';
     protected static ?int $navigationSort = 1;
 
-    // ✅ تحديد الـ slug يدوياً
     protected static ?string $slug = 'student-report';
 
-    // ❌ لا يظهر في القائمة الجانبية
     protected static bool $shouldRegisterNavigation = false;
 
     protected static string $view = 'filament.teacher.pages.teacher-student-report';
@@ -93,7 +92,7 @@ class TeacherStudentReport extends Page
         $html = view('pdf.today-records', [
             'records' => $records,
             'teacherName' => $teacherName,
-            'date' => now()->translatedFormat('l j F Y'),
+            'date' => now()->format('Y/m/d'),
             'dateHijri' => $today,
         ])->render();
 
@@ -143,6 +142,8 @@ class TeacherStudentReport extends Page
             'to_surah' => $toSurah?->name_arabic ?? '-',
             'from_ayah' => $plan->from_ayah,
             'to_ayah' => $plan->to_ayah,
+            'from_page' => $plan->from_page ?? '-',
+            'to_page' => $plan->to_page ?? '-',
             'total_ayahs' => $plan->total_ayahs ?? 0,
             'completed_ayahs' => $plan->completed_ayahs ?? 0,
             'remaining_ayahs' => ($plan->total_ayahs ?? 0) - ($plan->completed_ayahs ?? 0),
@@ -165,8 +166,8 @@ class TeacherStudentReport extends Page
 
             return [
                 'date' => $record->session_date?->format('Y/m/d'),
-                'session_type' => $this->getSessionTypeLabel($record->session_type),
-                'session_type_color' => match ($record->session_type) {
+                'type_label' => $this->getSessionTypeLabel($record->session_type),
+                'type_color' => match ($record->session_type) {
                     'hifz' => 'success', 'revision' => 'info', 'test' => 'warning', default => 'gray',
                 },
                 'surah' => $record->surah_id == $record->to_surah_id ? $fromSurah : "{$fromSurah} → {$toSurah}",
@@ -190,10 +191,13 @@ class TeacherStudentReport extends Page
         $this->monthSummary = [
             'sessions_count' => $records->count(),
             'total_ayahs' => $records->sum('ayahs_count'),
+            'hifz_ayahs' => $records->where('session_type', 'hifz')->sum('ayahs_count'),
+            'revision_ayahs' => $records->where('session_type', 'revision')->sum('ayahs_count'),
             'hifz_sessions' => $records->where('session_type', 'hifz')->count(),
             'revision_sessions' => $records->where('session_type', 'revision')->count(),
             'test_sessions' => $records->where('session_type', 'test')->count(),
             'total_mistakes' => $records->sum('mistakes_count'),
+            'avg_mistakes' => $records->count() > 0 ? round($records->avg('mistakes_count'), 1) : 0,
         ];
     }
 

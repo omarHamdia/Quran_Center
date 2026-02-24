@@ -73,7 +73,7 @@ class TeacherPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Teacher/Widgets'), for: 'App\\Filament\\Teacher\\Widgets')
             ->widgets([
                 \App\Filament\Teacher\Widgets\WeeklyStatsWidget::class,
-                Widgets\AccountWidget::class,
+                // Widgets\AccountWidget::class,
             ])
 
             ->navigationGroups([
