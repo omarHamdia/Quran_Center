@@ -15,6 +15,38 @@ class AdminDashboardService
 {
     protected Carbon $today;
 
+    private const EVALUATION_SCORES = [
+        'excellent'    => 5,
+        'very_good'    => 4,
+        'good'         => 3,
+        'acceptable'   => 2,
+        'needs_review' => 1,
+    ];
+
+    private const EVALUATION_LABELS = [
+        'excellent'    => 'ممتاز',
+        'very_good'    => 'جيد جداً',
+        'good'         => 'جيد',
+        'acceptable'   => 'مقبول',
+        'needs_review' => 'يحتاج مراجعة',
+    ];
+
+    private const SESSION_TYPE_LABELS = [
+        'hifz'     => 'حفظ جديد',
+        'revision' => 'مراجعة',
+        'test'     => 'اختبار',
+    ];
+
+    private const ARABIC_DAY_NAMES = [
+        'Saturday'  => 'السبت',
+        'Sunday'    => 'الأحد',
+        'Monday'    => 'الاثنين',
+        'Tuesday'   => 'الثلاثاء',
+        'Wednesday' => 'الأربعاء',
+        'Thursday'  => 'الخميس',
+        'Friday'    => 'الجمعة',
+    ];
+
     public function __construct()
     {
         $this->today = now();
@@ -113,17 +145,9 @@ class AdminDashboardService
         $weekStart = $this->today->copy()->startOfWeek(Carbon::SATURDAY);
         $weekEnd   = $weekStart->copy()->addDays(6)->endOfDay();
 
-        $evaluationScores = [
-            'excellent'    => 5,
-            'very_good'    => 4,
-            'good'         => 3,
-            'acceptable'   => 2,
-            'needs_review' => 1,
-        ];
-
         return Teacher::with('user')
             ->get()
-            ->map(function (Teacher $teacher) use ($weekStart, $weekEnd, $evaluationScores) {
+            ->map(function (Teacher $teacher) use ($weekStart, $weekEnd) {
                 $weeklyRecords = MemorizationRecord::where('teacher_id', $teacher->id)
                     ->whereBetween('session_date', [$weekStart, $weekEnd])
                     ->where('status', 'completed')
@@ -133,9 +157,9 @@ class AdminDashboardService
                 $weeklySessions = $weeklyRecords->count();
                 $weeklyAyahs    = $weeklyRecords->sum('ayahs_count');
 
-                $evaluatedRecords = $weeklyRecords->filter(fn ($r) => isset($evaluationScores[$r->evaluation]));
+                $evaluatedRecords = $weeklyRecords->filter(fn ($r) => isset(self::EVALUATION_SCORES[$r->evaluation]));
                 $avgScore = $evaluatedRecords->isNotEmpty()
-                    ? round($evaluatedRecords->avg(fn ($r) => $evaluationScores[$r->evaluation] ?? 0), 1)
+                    ? round($evaluatedRecords->avg(fn ($r) => self::EVALUATION_SCORES[$r->evaluation] ?? 0), 1)
                     : 0;
 
                 return [
@@ -157,22 +181,6 @@ class AdminDashboardService
     {
         $monthStart = $this->today->copy()->startOfMonth();
 
-        $evaluationLabels = [
-            'excellent'    => 'ممتاز',
-            'very_good'    => 'جيد جداً',
-            'good'         => 'جيد',
-            'acceptable'   => 'مقبول',
-            'needs_review' => 'يحتاج مراجعة',
-        ];
-
-        $evaluationScores = [
-            'excellent'    => 5,
-            'very_good'    => 4,
-            'good'         => 3,
-            'acceptable'   => 2,
-            'needs_review' => 1,
-        ];
-
         $records = MemorizationRecord::with(['student.user', 'student.teacher.user'])
             ->where('status', 'completed')
             ->whereBetween('session_date', [$monthStart, $this->today])
@@ -192,17 +200,17 @@ class AdminDashboardService
             ->get()
             ->groupBy('student_id');
 
-        return $records->map(function ($record, $index) use ($evaluationLabels, $evaluationScores, $evaluationsByStudent) {
+        return $records->map(function ($record, $index) use ($evaluationsByStudent) {
             $student = $record->student;
 
             $evaluations = $evaluationsByStudent->get($record->student_id, collect())
-                ->filter(fn ($r) => isset($evaluationScores[$r->evaluation]));
+                ->filter(fn ($r) => isset(self::EVALUATION_SCORES[$r->evaluation]));
 
             $avgScore = $evaluations->isNotEmpty()
-                ? $evaluations->avg(fn ($r) => $evaluationScores[$r->evaluation] ?? 0)
+                ? $evaluations->avg(fn ($r) => self::EVALUATION_SCORES[$r->evaluation] ?? 0)
                 : 0;
 
-            $avgLabel = $this->scoreToLabel((float) $avgScore, $evaluationLabels, $evaluationScores);
+            $avgLabel = $this->scoreToLabel((float) $avgScore, self::EVALUATION_LABELS, self::EVALUATION_SCORES);
 
             return [
                 'rank'            => $index + 1,
@@ -314,16 +322,6 @@ class AdminDashboardService
 
     public function getWeeklyAttendanceSummary(): array
     {
-        $arabicDays = [
-            'Saturday'  => 'السبت',
-            'Sunday'    => 'الأحد',
-            'Monday'    => 'الاثنين',
-            'Tuesday'   => 'الثلاثاء',
-            'Wednesday' => 'الأربعاء',
-            'Thursday'  => 'الخميس',
-            'Friday'    => 'الجمعة',
-        ];
-
         $result = [];
 
         for ($i = 6; $i >= 0; $i--) {
@@ -344,7 +342,7 @@ class AdminDashboardService
 
             $result[] = [
                 'date'            => Carbon::parse($date)->format('d/m'),
-                'day_name'        => $arabicDays[$dayName] ?? $dayName,
+                'day_name'        => self::ARABIC_DAY_NAMES[$dayName] ?? $dayName,
                 'present'         => $present,
                 'absent'          => $absent,
                 'late'            => $late,
@@ -385,35 +383,21 @@ class AdminDashboardService
 
     public function getRecentRecords(): Collection
     {
-        $evaluationLabels = [
-            'excellent'    => 'ممتاز',
-            'very_good'    => 'جيد جداً',
-            'good'         => 'جيد',
-            'acceptable'   => 'مقبول',
-            'needs_review' => 'يحتاج مراجعة',
-        ];
-
-        $sessionTypeLabels = [
-            'hifz'     => 'حفظ جديد',
-            'revision' => 'مراجعة',
-            'test'     => 'اختبار',
-        ];
-
         return MemorizationRecord::with(['student.user', 'teacher.user', 'surah'])
             ->where('status', 'completed')
             ->orderByDesc('session_date')
             ->orderByDesc('created_at')
             ->limit(10)
             ->get()
-            ->map(function (MemorizationRecord $record) use ($evaluationLabels, $sessionTypeLabels) {
+            ->map(function (MemorizationRecord $record) {
                 return [
                     'student_name' => $record->student?->user?->name ?? '-',
                     'teacher_name' => $record->teacher?->user?->name ?? '-',
                     'surah_name'   => $record->surah?->name_arabic ?? $record->surah?->name ?? '-',
                     'ayahs_count'  => (int) $record->ayahs_count,
-                    'evaluation'   => $evaluationLabels[$record->evaluation] ?? ($record->evaluation ?? '-'),
+                    'evaluation'   => self::EVALUATION_LABELS[$record->evaluation] ?? ($record->evaluation ?? '-'),
                     'session_date' => Carbon::parse($record->session_date)->format('Y/m/d'),
-                    'session_type' => $sessionTypeLabels[$record->session_type] ?? ($record->session_type ?? '-'),
+                    'session_type' => self::SESSION_TYPE_LABELS[$record->session_type] ?? ($record->session_type ?? '-'),
                 ];
             });
     }
