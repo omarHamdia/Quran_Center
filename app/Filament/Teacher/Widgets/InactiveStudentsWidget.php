@@ -10,9 +10,9 @@ class InactiveStudentsWidget extends Widget
 {
     protected static ?string $heading = '🔴 طلاب بدون نشاط (3+ أيام)';
 
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 8;
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $pollingInterval = '60s';
 

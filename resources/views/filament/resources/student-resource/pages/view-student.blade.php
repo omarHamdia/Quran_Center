@@ -7,31 +7,31 @@
         $monthlyStats = $this->getMonthlyStats();
     @endphp
 
-    <div class="space-y-6">
+    <div class="space-y-6 font-sans text-gray-800 dark:text-gray-100">
         {{-- بيانات الطالب الأساسية --}}
         <x-filament::section>
             <x-slot name="heading">
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-user class="w-5 h-5 text-primary-500" />
+                    <x-heroicon-o-user class="w-5 h-5 text-primary-500 dark:text-primary-400" />
                     <span>بيانات الطالب</span>
                 </div>
             </x-slot>
 
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div class="text-sm text-gray-500">الاسم</div>
+                <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">الاسم</div>
                     <div class="font-bold">{{ $student->user->name }}</div>
                 </div>
-                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div class="text-sm text-gray-500">الهاتف</div>
+                <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">الهاتف</div>
                     <div class="font-medium" dir="ltr">{{ $student->user->phone }}</div>
                 </div>
-                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div class="text-sm text-gray-500">المحفظ</div>
+                <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">المحفظ</div>
                     <div class="font-medium">{{ $student->teacher?->user?->name ?? 'غير معين' }}</div>
                 </div>
-                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div class="text-sm text-gray-500">المستوى</div>
+                <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">المستوى</div>
                     <x-filament::badge color="info">
                         @switch($student->current_level)
                             @case('beginner') مبتدئ @break
@@ -43,28 +43,35 @@
                         @endswitch
                     </x-filament::badge>
                 </div>
-                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div class="text-sm text-gray-500">الأجزاء المحفوظة</div>
-                    <div class="font-bold text-primary-600">{{ $student->memorized_juz ?? 0 }} جزء</div>
+                <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">الأجزاء المحفوظة</div>
+                    <div class="font-bold text-primary-600 dark:text-primary-300">{{ $student->memorized_juz ?? 0 }} جزء</div>
                 </div>
             </div>
         </x-filament::section>
 
         {{-- إحصائيات سريعة --}}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="p-4 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl text-center text-white">
+            <div class="p-4 rounded-xl text-center text-white"
+                 style="background: linear-gradient(135deg, rgba(16,185,129,1), rgba(6,182,212,1));">
                 <div class="text-3xl font-bold">{{ $weeklyStats['total_sessions'] }}</div>
                 <div class="text-sm opacity-90">جلسات الأسبوع</div>
             </div>
-            <div class="p-4 bg-gradient-to-br from-success-500 to-success-600 rounded-xl text-center text-white">
+
+            <div class="p-4 rounded-xl text-center text-white"
+                 style="background: linear-gradient(135deg, rgba(34,197,94,1), rgba(16,185,129,1));">
                 <div class="text-3xl font-bold">{{ $weeklyStats['total_ayahs'] }}</div>
                 <div class="text-sm opacity-90">آيات الأسبوع</div>
             </div>
-            <div class="p-4 bg-gradient-to-br from-warning-500 to-warning-600 rounded-xl text-center text-white">
+
+            <div class="p-4 rounded-xl text-center text-white"
+                 style="background: linear-gradient(135deg, rgba(245,158,11,1), rgba(249,115,22,1));">
                 <div class="text-3xl font-bold">{{ $monthlyStats['total_sessions'] }}</div>
                 <div class="text-sm opacity-90">جلسات الشهر</div>
             </div>
-            <div class="p-4 bg-gradient-to-br from-info-500 to-info-600 rounded-xl text-center text-white">
+
+            <div class="p-4 rounded-xl text-center text-white"
+                 style="background: linear-gradient(135deg, rgba(14,165,233,1), rgba(99,102,241,1));">
                 <div class="text-3xl font-bold">{{ $plans->whereIn('status', ['pending', 'in_progress'])->count() }}</div>
                 <div class="text-sm opacity-90">خطط نشطة</div>
             </div>
@@ -74,7 +81,7 @@
         <x-filament::section>
             <x-slot name="heading">
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-calendar-days class="w-5 h-5 text-warning-500" />
+                    <x-heroicon-o-calendar-days class="w-5 h-5 text-warning-500 dark:text-warning-400" />
                     <span>خطط الحفظ ({{ $plans->count() }})</span>
                 </div>
             </x-slot>
@@ -82,16 +89,22 @@
             @if($plans->count() > 0)
                 <div class="space-y-4">
                     @foreach($plans as $plan)
-                        <div class="p-4 border rounded-lg dark:border-gray-700 {{ $plan->status === 'completed' ? 'bg-success-50 dark:bg-success-900/10' : 'bg-white dark:bg-gray-800' }}">
+                        @php
+                            $isCompleted = $plan->status === 'completed';
+                            $cardBg = $isCompleted ? 'bg-white dark:bg-success-900/10' : 'bg-white dark:bg-gray-800';
+                            $cardBorder = $isCompleted ? 'border-success-200 dark:border-success-700' : 'border-gray-200 dark:border-gray-700';
+                        @endphp
+
+                        <div class="p-4 rounded-lg border {{ $cardBorder }} {{ $cardBg }} shadow-sm">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
-                                    <h4 class="font-bold text-lg">{{ $plan->title }}</h4>
-                                    <p class="text-sm text-gray-500">
+                                    <h4 class="font-bold text-lg text-gray-800 dark:text-gray-100">{{ $plan->title }}</h4>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
                                         من {{ $this->getSurahName($plan->from_surah_id) }} (آية {{ $plan->from_ayah }})
                                         إلى {{ $this->getSurahName($plan->to_surah_id) }} (آية {{ $plan->to_ayah }})
                                     </p>
                                     @if($plan->from_page && $plan->to_page)
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-400 dark:text-gray-500">
                                             الصفحات: {{ $plan->from_page }} - {{ $plan->to_page }}
                                         </p>
                                     @endif
@@ -112,24 +125,24 @@
                                     @endswitch
                                 </x-filament::badge>
                             </div>
-                            
+
                             {{-- شريط التقدم --}}
                             <div class="mb-2">
                                 <div class="flex justify-between text-sm mb-1">
-                                    <span>نسبة الإنجاز</span>
-                                    <span class="font-bold">{{ $plan->progress_percentage ?? 0 }}%</span>
+                                    <span class="text-gray-700 dark:text-gray-300">نسبة الإنجاز</span>
+                                    <span class="font-bold text-gray-800 dark:text-gray-100">{{ $plan->progress_percentage ?? 0 }}%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
-                                    <div class="h-3 rounded-full transition-all duration-500 {{ 
-                                        ($plan->progress_percentage ?? 0) >= 100 ? 'bg-success-500' : 
-                                        (($plan->progress_percentage ?? 0) >= 50 ? 'bg-info-500' : 'bg-warning-500') 
-                                    }}" style="width: {{ min($plan->progress_percentage ?? 0, 100) }}%"></div>
+                                    <div class="h-3 rounded-full transition-all duration-500"
+                                         style="width: {{ min($plan->progress_percentage ?? 0, 100) }}%;
+                                         background: {{ ($plan->progress_percentage ?? 0) >= 100 ? 'linear-gradient(90deg,#16a34a,#059669)' : (($plan->progress_percentage ?? 0) >= 50 ? 'linear-gradient(90deg,#06b6d4,#0ea5e9)' : 'linear-gradient(90deg,#f59e0b,#f97316)') }};">
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-                                <span>📅 البداية: {{ $plan->start_date?->format('Y/m/d') }}</span>
-                                <span>🏁 النهاية: {{ $plan->end_date?->format('Y/m/d') }}</span>
+                            <div class="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                <span>📅 البداية: {{ $plan->start_date?->format('Y/m/d') ?? '-' }}</span>
+                                <span>🏁 النهاية: {{ $plan->end_date?->format('Y/m/d') ?? '-' }}</span>
                                 @if($plan->total_ayahs)
                                     <span>📖 إجمالي الآيات: {{ $plan->total_ayahs }}</span>
                                 @endif
@@ -141,7 +154,7 @@
                     @endforeach
                 </div>
             @else
-                <div class="text-center py-8 text-gray-500">
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
                     <x-heroicon-o-calendar class="w-12 h-12 mx-auto mb-2 opacity-30" />
                     <p>لا توجد خطط حفظ لهذا الطالب</p>
                 </div>
@@ -152,35 +165,35 @@
         <x-filament::section>
             <x-slot name="heading">
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-success-500" />
+                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-success-500 dark:text-success-400" />
                     <span>سجلات التسميع (آخر 15)</span>
                 </div>
             </x-slot>
 
             @if($recentRecords->count() > 0)
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-100 dark:bg-gray-800">
-                            <tr>
-                                <th class="p-3 text-right">التاريخ</th>
-                                <th class="p-3 text-right">النوع</th>
-                                <th class="p-3 text-right">السورة</th>
-                                <th class="p-3 text-right">الآيات</th>
-                                <th class="p-3 text-right">الصفحات</th>
-                                <th class="p-3 text-right">التقييم</th>
-                                <th class="p-3 text-right">الأخطاء</th>
+                        <thead>
+                            <tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">التاريخ</th>
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">النوع</th>
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">السورة</th>
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">الآيات</th>
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">الصفحات</th>
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">التقييم</th>
+                                <th class="p-3 text-right text-gray-700 dark:text-gray-200">الأخطاء</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             @foreach($recentRecords as $record)
                                 @php
                                     $fromSurah = $this->getSurahName($record->surah_id);
-                                    $toSurah = $record->to_surah_id && $record->to_surah_id != $record->surah_id 
-                                        ? $this->getSurahName($record->to_surah_id) 
+                                    $toSurah = $record->to_surah_id && $record->to_surah_id != $record->surah_id
+                                        ? $this->getSurahName($record->to_surah_id)
                                         : null;
                                 @endphp
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                    <td class="p-3">{{ $record->session_date?->format('Y/m/d') }}</td>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                                    <td class="p-3 text-gray-700 dark:text-gray-200">{{ $record->session_date?->format('Y/m/d') }}</td>
                                     <td class="p-3">
                                         <x-filament::badge :color="match($record->session_type) {
                                             'hifz' => 'success',
@@ -196,20 +209,20 @@
                                             @endswitch
                                         </x-filament::badge>
                                     </td>
-                                    <td class="p-3">
+                                    <td class="p-3 text-gray-700 dark:text-gray-200">
                                         @if($toSurah)
                                             {{ $fromSurah }} ← {{ $toSurah }}
                                         @else
                                             {{ $fromSurah }}
                                         @endif
                                     </td>
-                                    <td class="p-3">
-                                        <span class="text-success-600">{{ $record->from_ayah }}</span>
+                                    <td class="p-3 text-gray-700 dark:text-gray-200">
+                                        <span class="text-success-600 dark:text-success-300">{{ $record->from_ayah }}</span>
                                         -
-                                        <span class="text-danger-600">{{ $record->to_ayah }}</span>
+                                        <span class="text-danger-600 dark:text-danger-300">{{ $record->to_ayah }}</span>
                                         <span class="text-gray-400 text-xs">({{ $record->ayahs_count ?? 0 }})</span>
                                     </td>
-                                    <td class="p-3 text-gray-500">
+                                    <td class="p-3 text-gray-600 dark:text-gray-400">
                                         @if($record->from_page && $record->to_page)
                                             {{ $record->from_page }} - {{ $record->to_page }}
                                         @else
@@ -246,7 +259,7 @@
                     </table>
                 </div>
             @else
-                <div class="text-center py-8 text-gray-500">
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
                     <x-heroicon-o-clipboard class="w-12 h-12 mx-auto mb-2 opacity-30" />
                     <p>لا توجد سجلات تسميع لهذا الطالب</p>
                 </div>

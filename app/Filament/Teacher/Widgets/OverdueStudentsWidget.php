@@ -10,9 +10,9 @@ class OverdueStudentsWidget extends Widget
 {
     protected static ?string $heading = '⚠️ طلاب متأخرون عن الخطة';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 7;
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $pollingInterval = '60s';
 

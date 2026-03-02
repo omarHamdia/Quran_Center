@@ -2,60 +2,65 @@
 
 namespace App\Filament\Teacher\Widgets;
 
+use App\Services\TeacherDashboardService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
-// ✅ عدّل أسماء الـ Models إذا مختلفة عندك
-use App\Models\Teacher;
-use App\Models\MemorizationRecord;
-use Illuminate\Support\Carbon;
-
 class WeeklyStatsWidget extends BaseWidget
 {
+    protected static ?int $sort = 1;
+
     protected int|string|array $columnSpan = 'full';
+
+    protected static ?string $pollingInterval = '30s';
 
     protected function getStats(): array
     {
-        $teacherId = Teacher::query()
-            ->where('user_id', auth()->id())
-            ->value('id');
+        $teacherId = TeacherDashboardService::getTeacherId();
 
-        $startOfWeek = Carbon::now()->startOfWeek();
-        $endOfWeek   = Carbon::now()->endOfWeek();
+        if (!$teacherId) {
+            return [];
+        }
 
-        $records = MemorizationRecord::query()
-            ->where('teacher_id', $teacherId)
-            ->whereBetween('session_date', [$startOfWeek, $endOfWeek])
-            ->get();
-
-        $totalSessions = $records->count();
-
-        $totalAyahs = $records->sum(function ($r) {
-            $from = (int) ($r->from_ayah ?? 0);
-            $to = (int) ($r->to_ayah ?? 0);
-            return ($from > 0 && $to >= $from) ? (($to - $from) + 1) : 0;
-        });
-
-        $studentsWithRecords = $records->pluck('student_id')->unique()->count();
-
-        $avgMistakes = $records->avg('mistakes_count') ?? 0;
+        $service = new TeacherDashboardService($teacherId);
+        $stats = $service->getWeeklyStats();
 
         return [
-            Stat::make('جلسات هذا الأسبوع', $totalSessions)
-                ->description('إجمالي الجلسات')
-                ->icon('heroicon-o-calendar'),
+            Stat::make('جلسات الأسبوع', $stats['total_sessions'])
+                ->description('إجمالي الجلسات المكتملة')
+                ->descriptionIcon('heroicon-m-calendar')
+                ->icon('heroicon-o-calendar')
+                ->color('success'),
 
-            Stat::make('آيات هذا الأسبوع', (int) $totalAyahs)
-                ->description('مجموع الآيات')
-                ->icon('heroicon-o-book-open'),
+            Stat::make('آيات حفظ', $stats['total_memorized'])
+                ->description('حفظ جديد هذا الأسبوع')
+                ->descriptionIcon('heroicon-m-book-open')
+                ->icon('heroicon-o-book-open')
+                ->color('info'),
 
-            Stat::make('طلاب شاركوا', $studentsWithRecords)
+            Stat::make('آيات مراجعة', $stats['total_revision'])
+                ->description('مراجعة هذا الأسبوع')
+                ->descriptionIcon('heroicon-m-arrow-path')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning'),
+
+            Stat::make('طلاب نشطون', $stats['active_students'])
                 ->description('طلاب لديهم تسميع')
-                ->icon('heroicon-o-user-group'),
+                ->descriptionIcon('heroicon-m-user-group')
+                ->icon('heroicon-o-user-group')
+                ->color('primary'),
 
-            Stat::make('متوسط الأخطاء', round($avgMistakes, 1))
-                ->description('متوسط لكل جلسة')
-                ->icon('heroicon-o-exclamation-triangle'),
+            Stat::make('الهدف المتبقي', $stats['remaining'])
+                ->description("من {$stats['total_target']} آية")
+                ->descriptionIcon('heroicon-m-flag')
+                ->icon('heroicon-o-flag')
+                ->color($stats['remaining'] > 0 ? 'danger' : 'success'),
+
+            Stat::make('المقترح اليوم', $stats['suggested_today'] . ' آية')
+                ->description('لتحقيق الهدف الأسبوعي')
+                ->descriptionIcon('heroicon-m-light-bulb')
+                ->icon('heroicon-o-light-bulb')
+                ->color('info'),
         ];
     }
 }

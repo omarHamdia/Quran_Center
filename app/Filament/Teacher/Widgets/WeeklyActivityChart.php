@@ -2,73 +2,65 @@
 
 namespace App\Filament\Teacher\Widgets;
 
+use App\Services\TeacherDashboardService;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Carbon;
-
-// ✅ عدّل أسماء الـ Models إذا مختلفة عندك
-use App\Models\Teacher;
-use App\Models\MemorizationRecord;
 
 class WeeklyActivityChart extends ChartWidget
 {
-    protected static ?string $heading = 'نشاط آخر 7 أيام';
+    protected static ?string $heading = '📈 نشاط آخر 7 أيام';
+
+    protected static ?int $sort = 2;
+
+    protected static ?string $maxHeight = '280px';
+
+    protected static ?string $pollingInterval = '60s';
 
     protected int|string|array $columnSpan = 'full';
 
     protected function getData(): array
     {
-        $teacherId = Teacher::query()
-            ->where('user_id', auth()->id())
-            ->value('id');
+        $teacherId = TeacherDashboardService::getTeacherId();
 
-        $days = collect(range(0, 6))
-            ->map(fn ($i) => Carbon::today()->subDays(6 - $i));
-
-        $labels = $days->map(fn ($d) => $d->translatedFormat('l'))->values()->all();
-
-        $hifz = [];
-        $revision = [];
-
-        foreach ($days as $d) {
-            $records = MemorizationRecord::query()
-                ->where('teacher_id', $teacherId)
-                ->whereDate('session_date', $d)
-                ->get();
-
-            $hifzAyahs = $records->where('session_type', 'hifz')->sum(function ($r) {
-                $from = (int) ($r->from_ayah ?? 0);
-                $to = (int) ($r->to_ayah ?? 0);
-                return ($from > 0 && $to >= $from) ? (($to - $from) + 1) : 0;
-            });
-
-            $revAyahs = $records->where('session_type', 'revision')->sum(function ($r) {
-                $from = (int) ($r->from_ayah ?? 0);
-                $to = (int) ($r->to_ayah ?? 0);
-                return ($from > 0 && $to >= $from) ? (($to - $from) + 1) : 0;
-            });
-
-            $hifz[] = (int) $hifzAyahs;
-            $revision[] = (int) $revAyahs;
+        if (!$teacherId) {
+            return [
+                'datasets' => [],
+                'labels' => [],
+            ];
         }
+
+        $service = new TeacherDashboardService($teacherId);
+        $chartData = $service->getWeeklyChartData();
 
         return [
             'datasets' => [
                 [
                     'label' => 'حفظ جديد (آيات)',
-                    'data' => $hifz,
+                    'data' => $chartData['hifz'],
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.15)',
+                    'borderColor' => '#10b981',
                     'borderWidth' => 2,
-                    'fill' => true,
                     'tension' => 0.35,
+                    'fill' => true,
+                    'pointBackgroundColor' => '#10b981',
+                    'pointBorderColor' => '#fff',
+                    'pointBorderWidth' => 2,
+                    'pointRadius' => 4,
                 ],
                 [
                     'label' => 'مراجعة (آيات)',
-                    'data' => $revision,
+                    'data' => $chartData['revision'],
+                    'backgroundColor' => 'rgba(14, 165, 233, 0.15)',
+                    'borderColor' => '#0ea5e9',
                     'borderWidth' => 2,
-                    'fill' => true,
                     'tension' => 0.35,
+                    'fill' => true,
+                    'pointBackgroundColor' => '#0ea5e9',
+                    'pointBorderColor' => '#fff',
+                    'pointBorderWidth' => 2,
+                    'pointRadius' => 4,
                 ],
             ],
-            'labels' => $labels,
+            'labels' => $chartData['labels'],
         ];
     }
 
@@ -84,18 +76,26 @@ class WeeklyActivityChart extends ChartWidget
                 'legend' => [
                     'display' => true,
                     'position' => 'top',
+                    'rtl' => true,
                     'labels' => [
                         'usePointStyle' => true,
                         'pointStyle' => 'circle',
+                        'padding' => 20,
                     ],
                 ],
             ],
             'scales' => [
                 'x' => [
                     'grid' => ['display' => false],
+                    'ticks' => ['color' => '#94a3b8'],
                 ],
                 'y' => [
                     'beginAtZero' => true,
+                    'ticks' => [
+                        'precision' => 0,
+                        'color' => '#94a3b8',
+                    ],
+                    'grid' => ['color' => 'rgba(148, 163, 184, 0.15)'],
                 ],
             ],
         ];
